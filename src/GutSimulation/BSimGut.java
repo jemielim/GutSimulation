@@ -14,11 +14,12 @@ import bsim.export.BSimLogger;
 import bsim.export.BSimMovExporter;
 import bsim.export.BSimPngExporter;
 import bsim.particle.BSimBacterium;
+import bsim.BSimChemicalField;
 
 /**
  * An example simulation definition to illustrate the key features of a BSim model.</br>
  */
-public class BSimTutorial {
+public class BSimGut {
 
 	public static void main(String[] args) {
 
@@ -33,69 +34,156 @@ public class BSimTutorial {
 		 * 	BSim#setVisc() defaults to 2.7e-3 Pa s
 		 * 	BSim#setTemperature() defaults to 305 K
 		 */
+		
+		//Relevant biological parameters for bacteria
+		double growthRateOne = 0;
+		double growthRateTwo = 0;
+		
+		// Add 10 bacteria to the simulation
+		double totpop = 300;
+		double specfrac = 0.5; //Fraction of species that is species 1.
+		
+		
+		/*********************************************************
+		 * Set up the environment for the simulation
+		 */
 		BSim sim = new BSim();			// New simulation object
-		sim.setDt(0.01);				// Global dt (time step)
-		sim.setSimulationTime(100);		// Total simulation time [sec]
+		sim.setDt(0.1);				// Global dt (time step)
+		sim.setSimulationTime(1000);		// Total simulation time [sec]
 		sim.setTimeFormat("0.00");		// Time format (for display etc.)
 		sim.setBound(100,100,100);		// Simulation boundaries [um]
+		sim.setSolid(true, true, true);
+		
+		
 
+		
+		/*********************************************************
+		 * Set up the chemical field
+		 */
+		final double c = 12e5; // molecules
+		final double decayRate = 9;
+		final double diffusivity = 10; // (microns)^2/sec
+		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+			
+		/*********************************************************
+		 * 
+		 */
+		
 		/*********************************************************
 		 * Step 2: Extend BSimParticle as required and create vectors marked final
 		 * As an example let's make a bacteria that turns red upon colliding
 		 */				
-		class BSimTutorialBacterium extends BSimBacterium {
+		class BSimMultiSpecies extends BSimBacterium {
 			// local field for setting whether a collision is occurring
-			private boolean collision = false;			
-
+			@SuppressWarnings("unused")
+			private boolean collision = false;		
+			public int species = 0;
+			
 			// Constructor for the BSimTutorialBacterium
-			public BSimTutorialBacterium(BSim sim, Vector3d position) {
-				super(sim, position); // default radius is 1 micron			
+			public BSimMultiSpecies(BSim sim, Vector3d position) {
+				super(sim, position); // default radius is 1 micron	
+				setSpecies(0);
 			}
-
-			// What happens in an interaction with another bacterium?
-			public void interaction(BSimTutorialBacterium p) {
-				// If the bacteria intersect, then set the collision state to 'true'
-				if(outerDistance(p) < 0) {
-					collision = true;
-					p.collision = true;
-				}
+			
+			public int getSpecies() {
+				return species;
 			}
-		}		
+			public void setSpecies(int species) {
+				this.species = species;
+			}
+			@SuppressWarnings("unchecked")
+			@Override
+			public void replicate() {
+				setRadiusFromSurfaceArea(surfaceArea(replicationRadius)/2);
+				BSimMultiSpecies child = new BSimMultiSpecies(sim, new Vector3d(position));	
+				child.setRadius(radius);
+				child.setSurfaceAreaGrowthRate(surfaceAreaGrowthRate);
+				child.setChildList(childList);
+				childList.add(child);
+			}
+			
+			@Override
+//			Bacteria move etc. and also add chemical to the global field.
+			public void action() {
+				super.action();
+				if (Math.random() < sim.getDt())
+					field.addQuantity(position,1e4);					
+			}
+		
+ 	
+		}
+		
 		// Set up a list of bacteria that will be present in the simulation
-		final Vector<BSimTutorialBacterium> bacteria = new Vector<BSimTutorialBacterium>();
-		// Add 100 bacteria to the simulation
-		while(bacteria.size() < 100) {		
+		
+		//Species
+		final Vector<BSimMultiSpecies> bacOne = new Vector<BSimMultiSpecies>();
+		final Vector<BSimMultiSpecies> bacTwo = new Vector<BSimMultiSpecies>();
+		
+		final Vector<BSimMultiSpecies> childOne = new Vector<BSimMultiSpecies>();
+		final Vector<BSimMultiSpecies> childTwo = new Vector<BSimMultiSpecies>();
+		
+		//Semi-clumsy way to make two species, but it makes dealing with childList easier.
+		while(bacOne.size() <= specfrac*totpop) {		
 			// Creates a new bacterium with random position within the boundaries
-			BSimTutorialBacterium b = new BSimTutorialBacterium(sim, 
+			
+			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
 					new Vector3d(Math.random()*sim.getBound().x, 
 								Math.random()*sim.getBound().y, 
 								Math.random()*sim.getBound().z));
 			// If the bacterium doesn't intersect any others then add it to the overall list
-			if(!b.intersection(bacteria)) bacteria.add(b);		
+			if(!b.intersection(bacOne)) bacOne.add(b);	
+			b.setRadius();
+			b.setSurfaceAreaGrowthRate(growthRateOne);
+			
+			b.setChildList(childOne);
+			b.setGoal(field);
+			bacOne.add(b);
 		}
+		
+		while(bacTwo.size() <= (1-specfrac)*totpop) {		
+			// Creates a new bacterium with random position within the boundaries
+			
+			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
+					new Vector3d(Math.random()*sim.getBound().x, 
+								Math.random()*sim.getBound().y, 
+								Math.random()*sim.getBound().z));
+			// If the bacterium doesn't intersect any others then add it to the overall list
+			if(!b.intersection(bacOne)) bacTwo.add(b);	
+			b.setRadius();
+			b.setSurfaceAreaGrowthRate(growthRateTwo);
+			
+			b.setChildList(childTwo);
+			b.setGoal(field);
+
+			bacTwo.add(b);
+		}
+		
+		
 
 		/*********************************************************
 		 * Step 3: Implement tick() on a BSimTicker and add the ticker to the simulation	  
 		 */
 		sim.setTicker(new BSimTicker() {
-			
-			// This will be called once at each global time step
 			@Override
 			public void tick() {
-				// Check all bacteria in the simulation for intersection with each other
-				for(int i = 1; i < bacteria.size(); i++) {
-					for(int j = i+1; j < bacteria.size(); j++) {
-						bacteria.get(i).interaction(bacteria.get(j));
-					}
+				for(BSimMultiSpecies b : bacOne) {
+					b.action();		
+					b.updatePosition();					
 				}
 				
-				// Each bacterium performs its action and updates its position
-				for(BSimTutorialBacterium b : bacteria) {
+				bacOne.addAll(childOne);
+				childOne.clear();
+				
+				for(BSimMultiSpecies b : bacTwo){
 					b.action();		
-					b.updatePosition();
+					b.updatePosition();					
 				}
+				bacTwo.addAll(childTwo);
+				childTwo.clear();
+				
 			}		
 		});
+
 
 		/*********************************************************
 		 * Step 4: Implement draw(Graphics) on a BSimDrawer and add the drawer to the simulation 
@@ -109,9 +197,17 @@ public class BSimTutorial {
 			@Override
 			public void scene(PGraphics3D p3d) {	
 				// loop through all the bacteria and draw them (red if colliding, green if not)
-				for(BSimTutorialBacterium b : bacteria) {
-					draw(b, b.collision ? Color.RED : Color.GREEN);
-				}			
+				for(BSimMultiSpecies b : bacOne) {
+				
+					draw(b, (b.getSpecies() == 0) ? Color.RED: Color.BLUE);
+				}	
+				for(BSimMultiSpecies b : bacTwo) {
+					draw(b, Color.BLUE);
+					//draw(b, (b.getSpecies() == 0) ? Color.RED: Color.BLUE);
+				}
+				draw(field, Color.BLUE, (float)(255/c));						
+
+				
 			}
 		};
 		sim.setDrawer(drawer);			// add the drawer to the simulation object.		
@@ -156,16 +252,7 @@ public class BSimTutorial {
 			
 			@Override
 			public void during() {
-				// Counter for the number of current collisions
-				int collisions = 0;
 				
-				// Loop through the bacteria and count collisions
-				for (BSimTutorialBacterium p : bacteria){
-					if(p.collision) collisions++;
-				}
-				
-				// Write the time and number of collisions to file
-				write(sim.getFormattedTime()+","+collisions);
 			}
 		};
 		sim.addExporter(logger);
