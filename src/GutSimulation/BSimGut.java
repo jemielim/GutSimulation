@@ -6,6 +6,8 @@ import java.util.Vector;
 import javax.vecmath.Vector3d;
 
 import processing.core.PGraphics3D;
+import processing.core.PConstants;
+import java.awt.Graphics2D;
 import bsim.BSim;
 import bsim.BSimTicker;
 import bsim.BSimUtils;
@@ -40,7 +42,7 @@ public class BSimGut {
 		double growthRateTwo = 0;
 		
 		// Add 10 bacteria to the simulation
-		double totpop = 40;
+		double totpop = 100;
 		double specfrac = 0.5; //Fraction of species that is species 1.
 		
 		
@@ -51,7 +53,7 @@ public class BSimGut {
 		sim.setDt(0.1);				// Global dt (time step)
 		sim.setSimulationTime(1000);		// Total simulation time [sec]
 		sim.setTimeFormat("0.00");		// Time format (for display etc.)
-		sim.setBound(100,100,200);		// Simulation boundaries [um]
+		sim.setBound(400,100,100);		// Simulation boundaries [um]
 		sim.setSolid(true, true, true);
 		
 		
@@ -159,6 +161,51 @@ public class BSimGut {
 		}
 		
 		
+		//Extend BSimP3DDrawer to change the perspective on the simulation region
+		
+		class BSimP3DDrawerGut extends BSimP3DDrawer {
+			private boolean cameraIsInitialised = false;
+			
+			public BSimP3DDrawerGut(BSim sim, int width, int height) {
+				super(sim, width, height);
+				// TODO Auto-generated constructor stub
+			}
+
+			@Override
+			public void scene(PGraphics3D arg0) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void draw(Graphics2D g) {
+				p3d.beginDraw();
+
+				if(!cameraIsInitialised){
+					p3d.camera(-(float)bound.x*0f, (float)bound.y*2.5f, (float)bound.z*2f, 
+						(float)bound.x*0.5f, (float)bound.y*0f, (float)bound.z*0.f, 
+						0, 0,1);
+					cameraIsInitialised = true;
+				}
+				
+				p3d.textFont(font);
+				p3d.textMode(PConstants.SCREEN);
+
+				p3d.sphereDetail(10);
+				p3d.noStroke();		
+				p3d.background(0, 0, 0);	
+
+				scene(p3d);
+				boundaries();
+				time();
+
+				p3d.endDraw();
+				g.drawImage(p3d.image, 0,0, null);
+			}
+			
+		
+		}
+		
 
 		/*********************************************************
 		 * Step 3: Implement tick() on a BSimTicker and add the ticker to the simulation	  
@@ -193,7 +240,7 @@ public class BSimGut {
 		 * and a clock but still requires the implementation of scene(PGraphics3D) to draw particles
 		 * You can use the draw(BSimParticle, Color) method to draw particles 
 		 */
-		BSimP3DDrawer drawer = new BSimP3DDrawer(sim, 1200,800) {
+		BSimP3DDrawer drawer = new BSimP3DDrawerGut(sim, 1200,800) {
 			
 			@Override
 			public void scene(PGraphics3D p3d) {	
