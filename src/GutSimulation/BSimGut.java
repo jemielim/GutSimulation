@@ -60,13 +60,32 @@ public class BSimGut {
 
 		
 		/*********************************************************
-		 * Set up the chemical field
+		 * Set up the chemical field. The code will be set up to have 5 possible chemical fields (A, B, C, D) that respectively are food sources for
+		 * species one and two (A and B), chemoattractants for species one and two to itself (C and D) and a chemorepellent that species one produces
+		 *  to act on species two. Kind of a lot, but we can narrow things down latter as necessary.
+		 * We'll assume all cytokines and nutrients have the same diffusivity and decay rate.
 		 */
+		
+		
+		
 		final double c = 12e10; // molecules
 		final double decayRate = 9;
 		final double diffusivity = 10e3; // (microns)^2/sec
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 			
+		final BSimChemicalField fieldA = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+		final BSimChemicalField fieldB = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+		final BSimChemicalField fieldC = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+		final BSimChemicalField fieldD = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+		final BSimChemicalField fieldE = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+		
+
+		final double chemAProd = 1e4;
+		final double chemBProd = 1e4;
+		final double chemCProd = 1e4;
+		final double chemDProd = 1e4;
+		final double chemEProd = 1e4;
+		
 		/*********************************************************
 		 * 
 		 */
@@ -109,7 +128,15 @@ public class BSimGut {
 			public void action() {
 				super.action();
 				if (Math.random() < sim.getDt())
-					field.addQuantity(position,0);					
+					
+					//Produce chemoattractants for the specific species
+					if(species ==0){
+					fieldC.addQuantity(position,chemCProd);
+					fieldE.addQuantity(position, chemEProd);
+					}
+					else {
+					fieldD.addQuantity(position, chemDProd);
+					}
 			}
 		
  	
