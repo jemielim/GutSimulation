@@ -40,7 +40,7 @@ public class BSimGut {
 		double growthRateTwo = 0;
 		
 		// Add 10 bacteria to the simulation
-		double totpop = 300;
+		double totpop = 40;
 		double specfrac = 0.5; //Fraction of species that is species 1.
 		
 		
@@ -51,7 +51,7 @@ public class BSimGut {
 		sim.setDt(0.1);				// Global dt (time step)
 		sim.setSimulationTime(1000);		// Total simulation time [sec]
 		sim.setTimeFormat("0.00");		// Time format (for display etc.)
-		sim.setBound(100,100,100);		// Simulation boundaries [um]
+		sim.setBound(100,100,200);		// Simulation boundaries [um]
 		sim.setSolid(true, true, true);
 		
 		
@@ -60,9 +60,9 @@ public class BSimGut {
 		/*********************************************************
 		 * Set up the chemical field
 		 */
-		final double c = 12e5; // molecules
+		final double c = 12e10; // molecules
 		final double decayRate = 9;
-		final double diffusivity = 10; // (microns)^2/sec
+		final double diffusivity = 10e3; // (microns)^2/sec
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 			
 		/*********************************************************
@@ -107,7 +107,7 @@ public class BSimGut {
 			public void action() {
 				super.action();
 				if (Math.random() < sim.getDt())
-					field.addQuantity(position,1e4);					
+					field.addQuantity(position,0);					
 			}
 		
  	
@@ -176,12 +176,13 @@ public class BSimGut {
 				
 				for(BSimMultiSpecies b : bacTwo){
 					b.action();		
-					b.updatePosition();					
+					//b.updatePosition();					
 				}
 				bacTwo.addAll(childTwo);
 				childTwo.clear();
-				
-			}		
+			
+				field.addQuantity(new Vector3d(10,10,10),1e6);		
+			}	
 		});
 
 
@@ -192,7 +193,7 @@ public class BSimGut {
 		 * and a clock but still requires the implementation of scene(PGraphics3D) to draw particles
 		 * You can use the draw(BSimParticle, Color) method to draw particles 
 		 */
-		BSimP3DDrawer drawer = new BSimP3DDrawer(sim, 800,600) {
+		BSimP3DDrawer drawer = new BSimP3DDrawer(sim, 1200,800) {
 			
 			@Override
 			public void scene(PGraphics3D p3d) {	
@@ -206,7 +207,7 @@ public class BSimGut {
 					//draw(b, (b.getSpecies() == 0) ? Color.RED: Color.BLUE);
 				}
 				draw(field, Color.BLUE, (float)(255/c));						
-
+			
 				
 			}
 		};
