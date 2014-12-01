@@ -7,7 +7,9 @@ import javax.vecmath.Vector3d;
 
 import processing.core.PGraphics3D;
 import processing.core.PConstants;
+
 import java.awt.Graphics2D;
+
 import bsim.BSim;
 import bsim.BSimTicker;
 import bsim.BSimUtils;
@@ -23,7 +25,7 @@ import bsim.BSimChemicalField;
  */
 public class BSimGut {
 
-	public static void main(String[] args) {
+	public static <BSimChemicalFieldGut> void main(String[] args) {
 
 		/*********************************************************
 		 * Step 1: Create a new simulation object and set environmental properties
@@ -50,10 +52,13 @@ public class BSimGut {
 		 * Set up the environment for the simulation
 		 */
 		BSim sim = new BSim();			// New simulation object
-		sim.setDt(0.1);				// Global dt (time step)
+		sim.setDt(1);				// Global dt (time step)
 		sim.setSimulationTime(1000);		// Total simulation time [sec]
 		sim.setTimeFormat("0.00");		// Time format (for display etc.)
-		sim.setBound(400,100,100);		// Simulation boundaries [um]
+		double xr = 400;
+		double yr = 100;
+		double zr = 100;
+		sim.setBound(xr, yr, zr);		// Simulation boundaries [um]
 		sim.setSolid(true, true, true);
 		
 		
@@ -68,9 +73,9 @@ public class BSimGut {
 		
 		
 		
-		final double c = 12e10; // molecules
-		final double decayRate = 9;
-		final double diffusivity = 10e3; // (microns)^2/sec
+		final double c = 0; // molecules
+		final double decayRate = 10e2;
+		final double diffusivity = 10e2; // (microns)^2/sec
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 			
 		final BSimChemicalField fieldA = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
@@ -79,12 +84,18 @@ public class BSimGut {
 		final BSimChemicalField fieldD = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 		final BSimChemicalField fieldE = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 		
+		//Need two integrated fields for the bacterium to respond to
+		final BSimChemicalField fieldOne = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+		final BSimChemicalField fieldTwo = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
+		
+		
+		
 
-		final double chemAProd = 1e4;
-		final double chemBProd = 1e4;
-		final double chemCProd = 1e4;
-		final double chemDProd = 1e4;
-		final double chemEProd = 1e4;
+		final double chemAProd = 1e9;
+		final double chemBProd = 1e9;
+		final double chemCProd = 1e9;
+		final double chemDProd = 1e9;
+		final double chemEProd = 1e9;
 		
 		/*********************************************************
 		 * 
@@ -127,20 +138,47 @@ public class BSimGut {
 //			Bacteria move etc. and also add chemical to the global field.
 			public void action() {
 				super.action();
-				if (Math.random() < sim.getDt())
+				//if (Math.random() < sim.getDt())
 					
 					//Produce chemoattractants for the specific species
 					if(species ==0){
-					fieldC.addQuantity(position,chemCProd);
+					fieldC.addQuantity(position, chemCProd);
 					fieldE.addQuantity(position, chemEProd);
+					
 					}
 					else {
 					fieldD.addQuantity(position, chemDProd);
 					}
+				field.addQuantity(position, chemDProd);
 			}
 		
  	
 		}
+
+		
+		@SuppressWarnings("hiding")
+		class BSimChemicalFieldGut extends BSimChemicalField{
+
+
+			
+			
+			public BSimChemicalFieldGut(BSim sim, int[] boxes,
+					double diffusivity, double decayRate) {
+				super(sim, boxes, diffusivity, decayRate);
+				// TODO Auto-generated constructor stub
+			}
+
+			public void addFields(BSimChemicalField chemA, BSimChemicalField chemB)
+			{
+				//Combine together the fields from two different chemical fields. 
+				//Most naive way to combine together chemoattractants and chemorepellents
+				//this.setConc(x, y, z, chemEProd);
+				
+			
+			}
+			
+		}
+		
 		
 		// Set up a list of bacteria that will be present in the simulation
 		
@@ -182,7 +220,7 @@ public class BSimGut {
 			b.setSurfaceAreaGrowthRate(growthRateTwo);
 			
 			b.setChildList(childTwo);
-			b.setGoal(field);
+			b.setGoal(fieldA);
 
 			bacTwo.add(b);
 		}
@@ -242,7 +280,7 @@ public class BSimGut {
 			public void tick() {
 				for(BSimMultiSpecies b : bacOne) {
 					b.action();		
-					b.updatePosition();					
+					//b.updatePosition();					
 				}
 				
 				bacOne.addAll(childOne);
@@ -250,12 +288,13 @@ public class BSimGut {
 				
 				for(BSimMultiSpecies b : bacTwo){
 					b.action();		
-					//b.updatePosition();					
+				//	b.updatePosition();					
 				}
 				bacTwo.addAll(childTwo);
 				childTwo.clear();
 			
-				field.addQuantity(new Vector3d(10,10,10),1e6);		
+				//field.addQuantity(new Vector3d(10,10,10),1e6);		
+				field.update();
 			}	
 		});
 
