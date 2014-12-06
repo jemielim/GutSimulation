@@ -25,7 +25,7 @@ import bsim.BSimChemicalField;
  */
 public class BSimGut {
 
-	public static <BSimChemicalFieldGut> void main(String[] args) {
+	public static <BSimChemicalFieldGut>  void main(String[] args) {
 
 		/*********************************************************
 		 * Step 1: Create a new simulation object and set environmental properties
@@ -134,13 +134,13 @@ public class BSimGut {
 				childList.add(child);
 			}
 			
-			@Override
-//			Bacteria move etc. and also add chemical to the global field.
+			@Override	
+			//Bacteria move etc. and also add chemical to the global field.
 			public void action() {
 				super.action();
 				//if (Math.random() < sim.getDt())
 					
-					//Produce chemo-attractants for the specific species
+					//Produce chemoattractant for the specific species
 					if(species ==0){
 					fieldC.addQuantity(position, chemCProd);
 					fieldE.addQuantity(position, chemEProd);
@@ -152,15 +152,11 @@ public class BSimGut {
 				fieldD.addQuantity(position, chemDProd); //What is this doing
 			}
 		
- 	
 		}
 
 		
-		@SuppressWarnings("hiding")
 		class BSimChemicalFieldGut extends BSimChemicalField{
 
-
-			
 			
 			public BSimChemicalFieldGut(BSim sim, int[] boxes,
 					double diffusivity, double decayRate) {
@@ -329,7 +325,7 @@ public class BSimGut {
 					draw(b, Color.BLUE);
 					//draw(b, (b.getSpecies() == 0) ? Color.RED: Color.BLUE);
 				}
-				//draw(field, Color.BLUE, (float)(255/c));						
+				draw(field, Color.BLUE, (float)(255/c));						
 			
 				
 			}
@@ -342,47 +338,67 @@ public class BSimGut {
 		 * 	BSimExporter#setDt()
 		 */
 		
-		// Create a new directory for the simulation results
-		String resultsDir = BSimUtils.generateDirectoryPath("./results/");			
 
-		
 		//Updating exporter; see BSimRunTumble example
 		
-		class BSimGutLogger extends BSimLogger {
-			protected Vector3d positionA;
+//		class BSimGutLogger extends BSimLogger {
+//			protected Vector3d positionA;
+//			
+//			public BSimGutLogger(BSim sim, String filename) {
+//				super(sim, filename);
+//			}
+//			
+//			@Override
+//			public void before() {
+//				super.before();
+//				// Write a header containing the names of variables we will be exporting
+//				write("time,positions"); 
+//			}
+//			@Override
+//			public void during() {	
+//				Bpos = bacterium.getPosition();			
+//			}
+//			
+//			sim.addExporter(new BSimGutLogger(sim, resultsDir + "bacteriaPositions.csv") {
+//				@Override
+//				public void during() {
+//					set();
+//					write(sim.getFormattedTime()+","Bpos);
+//				}
+//				super.during();
+//				}
+//			}
 			
-			public BSimGutLogger(BSim sim, String filename) {
-				super(sim, filename);
-			}
-			
-			@Override
-			public void before() {
-				super.before();
-				// Write a header containing the names of variables we will be exporting
-				write("time,positions"); 
-			}
-			@Override
-			public void during() {	
-				Bpos = bacterium.getPosition();			
-			}
-			
-			sim.addExporter(new BSimGutLogger(sim, resultsDir + "bacteriaPositions.csv") {
-				@Override
-				public void during() {
-					set();
-					write(sim.getFormattedTime()+","Bpos);
-				}
-				super.during();
-				}
-			});
-			
-	}
+//	}
 
 		/*********************************************************
 		 * Step 6: Call sim.preview() to preview the scene or sim.export() to set exporters working 
 		 */
-		sim.preview();
+		// Create a new directory for the simulation results
+		String resultsDir = BSimUtils.generateDirectoryPath("./results/");			
+		
+		BSimLogger trackerXYZ= new BSimLogger(sim, resultsDir + "trackerXYZ.csv") {
+			@Override
+			public void during() {
+				for(int i = 1; i < bacOne.size(); i++) {
+					write(sim.getFormattedTime()+","+bacOne.get(i).getPosition().x+","+bacOne.get(i).getPosition().y+","+bacOne.get(i).getPosition().z+","+field.getConc(1,1,1)+", 1");
+				}
+				for(int i = 1; i < bacOne.size(); i++) {
+					write(sim.getFormattedTime()+","+bacTwo.get(i).getPosition().x+","+bacTwo.get(i).getPosition().y+","+bacTwo.get(i).getPosition().z+","+field.getConc(1,1,1)+", 2");
+				}
+				
+			}
+		};
+		
+		trackerXYZ.setDt(0.1);
+		sim.addExporter(trackerXYZ);
+
+		// run the simulation
 		sim.export();
+		
+		
+		sim.preview();
+		//sim.export();
 
 	}
 }
