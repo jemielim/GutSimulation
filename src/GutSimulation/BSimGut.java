@@ -44,7 +44,7 @@ public class BSimGut {
 		double growthRateTwo = 0;
 		
 		// Add 10 bacteria to the simulation
-		double totpop = 100;
+		double totpop = 10;
 		double specfrac = 0.5; //Fraction of species that is species 1.
 		
 		
@@ -53,7 +53,7 @@ public class BSimGut {
 		 */
 		BSim sim = new BSim();			// New simulation object
 		sim.setDt(0.01);				// Global dt (time step)
-		sim.setSimulationTime(1000);		// Total simulation time [sec]
+		sim.setSimulationTime(1000);	// Total simulation time [sec]
 		sim.setTimeFormat("0.00");		// Time format (for display etc.)
 		final double xr = 400;
 		final double yr = 100;
@@ -72,12 +72,11 @@ public class BSimGut {
 		//Will want to change this to use 2 parameters: relative repeller/atractor, wall food produced
 		
 		final double c = 12e5; // molecules
-		final double decayRate = 0.9;
-		final double diffusivity = 890; // (microns)^2/sec
+		final double decayRate = 10;
+		final double diffusivity = 10; // (microns)^2/sec
 
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 			
-		field.setConc( 0);
 		final BSimChemicalField fieldA = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 		final BSimChemicalField fieldB = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 		final BSimChemicalField fieldC = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
@@ -87,10 +86,14 @@ public class BSimGut {
 		//Need two integrated fields for the bacterium to respond to
 		final BSimChemicalField fieldOne = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 		final BSimChemicalField fieldTwo = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
-		
-		
-		
 
+		field.setConc(0);
+		fieldA.setConc(0);
+		fieldB.setConc(0);
+		fieldC.setConc(0);
+		fieldD.setConc(0);
+		fieldE.setConc(0);
+		
 		final double chemAProd = 1e9;
 		final double chemBProd = 1e9;
 		final double chemCProd = 1e9;
@@ -112,9 +115,9 @@ public class BSimGut {
 			public int species = 0;
 			
 			// Constructor for the BSimTutorialBacterium
-			public BSimMultiSpecies(BSim sim, Vector3d position) { 
+			public BSimMultiSpecies(BSim sim, Vector3d position, int species) { 
 				super(sim, position); // default radius is 1 micron
-				setSpecies(0);
+				setSpecies(species);
 			}
 			
 			public int getSpecies() {
@@ -127,7 +130,7 @@ public class BSimGut {
 			@Override
 			public void replicate() {
 				setRadiusFromSurfaceArea(surfaceArea(replicationRadius)/2);
-				BSimMultiSpecies child = new BSimMultiSpecies(sim, new Vector3d(position));	
+				BSimMultiSpecies child = new BSimMultiSpecies(sim, new Vector3d(position), 0);	
 				child.setRadius(radius);
 				child.setSurfaceAreaGrowthRate(surfaceAreaGrowthRate);
 				child.setChildList(childList);
@@ -147,14 +150,14 @@ public class BSimGut {
 					
 					}
 					else {
-					field.addQuantity(position, chemDProd);
+					fieldD.addQuantity(position, chemDProd);
 					}
-				fieldD.addQuantity(position, chemDProd); //What is this doing
+
+					
 			}
 		
 		}
 
-		
 		class BSimChemicalFieldGut extends BSimChemicalField{
 
 			
@@ -175,8 +178,6 @@ public class BSimGut {
 			
 		}
 	
-		
-		
 		// Set up a list of bacteria that will be present in the simulation
 		
 		//Species
@@ -187,13 +188,24 @@ public class BSimGut {
 		final Vector<BSimMultiSpecies> childTwo = new Vector<BSimMultiSpecies>();
 		
 		//Semi-clumsy way to make two species, but it makes dealing with childList easier.
-		while(bacOne.size() <= specfrac*totpop) {		
+		
+		while(bacOne.size() <= specfrac*totpop) {
 			// Creates a new bacterium with random position within the boundaries
 			
 			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
 					new Vector3d(Math.random()*sim.getBound().x, 
-								Math.random()*sim.getBound().y, 
-								Math.random()*sim.getBound().z));
+							 Math.random()*sim.getBound().y, 
+								 Math.random()*sim.getBound().z),0);
+			
+
+			//mlj: temporary
+//			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
+//					new Vector3d(0.25*sim.getBound().x, 
+//							 0.25*sim.getBound().y, 
+//								0.25* sim.getBound().z), 0);
+//			
+			
+
 			// If the bacterium doesn't intersect any others then add it to the overall list
 			if(!b.intersection(bacOne)) bacOne.add(b);	
 			b.setRadius();
@@ -204,13 +216,20 @@ public class BSimGut {
 			bacOne.add(b);
 		}
 		
-		while(bacTwo.size() <= (1-specfrac)*totpop) {		
+		while(bacTwo.size() < (1-specfrac)*totpop) {		
 			// Creates a new bacterium with random position within the boundaries
 			
 			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
 					new Vector3d(Math.random()*sim.getBound().x/2, 
 								Math.random()*sim.getBound().y/2, 
-								Math.random()*sim.getBound().z/2));
+								Math.random()*sim.getBound().z/2),1);
+			
+			//mlj: temporary
+//			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
+//					new Vector3d(0.75*sim.getBound().x, 
+//							 0.75*sim.getBound().y, 
+//								0.75* sim.getBound().z),1);
+//			
 			// If the bacterium doesn't intersect any others then add it to the overall list
 			if(!b.intersection(bacOne)) bacTwo.add(b);	
 			b.setRadius();
@@ -222,7 +241,7 @@ public class BSimGut {
 			bacTwo.add(b);
 		}
 		
-		
+	
 		//Extend BSimP3DDrawer to change the perspective on the simulation region
 		
 		class BSimP3DDrawerGut extends BSimP3DDrawer {
@@ -276,34 +295,37 @@ public class BSimGut {
 			@Override
 			public void tick() {
 				for(BSimMultiSpecies b : bacOne) {
-					b.action();		
-					b.updatePosition();					
+					b.action();
+
+					b.updatePosition();		
+					
 				}
 				
 				bacOne.addAll(childOne);
 				childOne.clear();
 				
 				for(BSimMultiSpecies b : bacTwo){
-					b.action();		
-
+					b.action();
 				 	b.updatePosition();					
 				}
 				bacTwo.addAll(childTwo);
 				childTwo.clear();
 			
 				//field.addQuantity(new Vector3d(10,10,10),1e6);
-				for( int i=1;i<10;i++){
-					for (int j=1;j<10;j++){
-						fieldA.addQuantity(0,i,j,1e11);
-					}
-				}
-				
-				
+//				for( int i=1;i<10;i++){
+//					for (int j=1;j<10;j++){
+//						fieldA.addQuantity(0,i,j,1e11);
+//					}
+//				}
 				
 				field.update();
+				fieldA.update();
+				fieldB.update();
+				fieldC.update();
+				fieldD.update();
+				fieldE.update();
 			}	
 		});
-
 
 		/*********************************************************
 		 * Step 4: Implement draw(Graphics) on a BSimDrawer and add the drawer to the simulation 
@@ -312,6 +334,7 @@ public class BSimGut {
 		 * and a clock but still requires the implementation of scene(PGraphics3D) to draw particles
 		 * You can use the draw(BSimParticle, Color) method to draw particles 
 		 */
+		
 		BSimP3DDrawer drawer = new BSimP3DDrawerGut(sim, 1200,800) {
 			
 			@Override
@@ -325,7 +348,11 @@ public class BSimGut {
 					draw(b, Color.BLUE);
 					//draw(b, (b.getSpecies() == 0) ? Color.RED: Color.BLUE);
 				}
-				draw(field, Color.BLUE, (float)(255/c));						
+				
+				
+				//mlj: To test that the fields are being produced properly show these fields.
+				draw(fieldE, Color.GREEN, (float)(255/c));						
+				draw(fieldD, Color.RED, (float)(255/c));						
 			
 				
 			}
@@ -394,11 +421,9 @@ public class BSimGut {
 		sim.addExporter(trackerXYZ);
 
 		// run the simulation
-		sim.export();
-		
-		
+	//	sim.export();
+				
 		sim.preview();
-		//sim.export();
 
 	}
 }
