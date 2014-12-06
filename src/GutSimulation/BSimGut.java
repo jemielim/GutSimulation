@@ -55,9 +55,9 @@ public class BSimGut {
 		sim.setDt(1);				// Global dt (time step)
 		sim.setSimulationTime(1000);		// Total simulation time [sec]
 		sim.setTimeFormat("0.00");		// Time format (for display etc.)
-		double xr = 400;
-		double yr = 100;
-		double zr = 100;
+		final double xr = 400;
+		final double yr = 100;
+		final double zr = 100;
 		sim.setBound(xr, yr, zr);		// Simulation boundaries [um]
 		sim.setSolid(true, true, true);
 		
@@ -71,11 +71,11 @@ public class BSimGut {
 		 * We'll assume all cytokines and nutrients have the same diffusivity and decay rate.
 		 */
 		
+		//Will want to change this to use 2 parameters: relative repeller/atractor, wall food produced
 		
-		
-		final double c = 0; // molecules
-		final double decayRate = 10e2;
-		final double diffusivity = 10e2; // (microns)^2/sec
+		final double c = 12e5; // molecules
+		final double decayRate = 0.9;
+		final double diffusivity = 890; // (microns)^2/sec
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 			
 		final BSimChemicalField fieldA = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
@@ -103,7 +103,7 @@ public class BSimGut {
 		
 		/*********************************************************
 		 * Step 2: Extend BSimParticle as required and create vectors marked final
-		 * As an example let's make a bacteria that turns red upon colliding
+		 * 
 		 */				
 		class BSimMultiSpecies extends BSimBacterium {
 			// local field for setting whether a collision is occurring
@@ -112,8 +112,8 @@ public class BSimGut {
 			public int species = 0;
 			
 			// Constructor for the BSimTutorialBacterium
-			public BSimMultiSpecies(BSim sim, Vector3d position) {
-				super(sim, position); // default radius is 1 micron	
+			public BSimMultiSpecies(BSim sim, Vector3d position) { 
+				super(sim, position); // default radius is 1 micron
 				setSpecies(0);
 			}
 			
@@ -149,7 +149,7 @@ public class BSimGut {
 					else {
 					fieldD.addQuantity(position, chemDProd);
 					}
-				field.addQuantity(position, chemDProd);
+				fieldD.addQuantity(position, chemDProd); //What is this doing
 			}
 		
  	
@@ -178,6 +178,7 @@ public class BSimGut {
 			}
 			
 		}
+	
 		
 		
 		// Set up a list of bacteria that will be present in the simulation
@@ -280,7 +281,7 @@ public class BSimGut {
 			public void tick() {
 				for(BSimMultiSpecies b : bacOne) {
 					b.action();		
-					//b.updatePosition();					
+					b.updatePosition();					
 				}
 				
 				bacOne.addAll(childOne);
@@ -288,12 +289,20 @@ public class BSimGut {
 				
 				for(BSimMultiSpecies b : bacTwo){
 					b.action();		
-				//	b.updatePosition();					
+				 	b.updatePosition();					
 				}
 				bacTwo.addAll(childTwo);
 				childTwo.clear();
 			
-				//field.addQuantity(new Vector3d(10,10,10),1e6);		
+				//field.addQuantity(new Vector3d(10,10,10),1e6);
+				for( int i=1;i<10;i++){
+					for (int j=1;j<10;j++){
+						fieldA.addQuantity(0,i,j,1e11);
+					}
+				}
+				
+				
+				
 				field.update();
 			}	
 		});
@@ -319,7 +328,7 @@ public class BSimGut {
 					draw(b, Color.BLUE);
 					//draw(b, (b.getSpecies() == 0) ? Color.RED: Color.BLUE);
 				}
-				draw(field, Color.BLUE, (float)(255/c));						
+				//draw(field, Color.BLUE, (float)(255/c));						
 			
 				
 			}
@@ -335,53 +344,44 @@ public class BSimGut {
 		// Create a new directory for the simulation results
 		String resultsDir = BSimUtils.generateDirectoryPath("./results/");			
 
-		/* 
-		 * BSimMovExporter is a concrete BSimExporter for creating Quicktime movies
-		 * Available setters:
-		 * 	BSimMovExporter#setSpeed()
-		 */			
-		BSimMovExporter movExporter = new BSimMovExporter(sim, drawer, resultsDir + "BSim.mov");
-		movExporter.setDt(0.03);
-		sim.addExporter(movExporter);			
-
-		/* 
-		 * BSimPngExporter is another concrete BSimExporter for creating png images. 
-		 */
-		BSimPngExporter pngExporter = new BSimPngExporter(sim, drawer, resultsDir);
-		pngExporter.setDt(0.5);
-		sim.addExporter(pngExporter);			
-
-		/* 
-		 * BSimLogger is an abstract BSimExporter that requires an implementation of during().
-		 * It provides the convenience method write() 
-		 */
-		BSimLogger logger = new BSimLogger(sim, resultsDir + "tutorialExample.csv") {
+		
+		//Updating exporter; see BSimRunTumble example
+		
+		class BSimGutLogger extends BSimLogger {
+			protected Vector3d positionA;
+			
+			public BSimGutLogger(BSim sim, String filename) {
+				super(sim, filename);
+			}
 			
 			@Override
 			public void before() {
 				super.before();
 				// Write a header containing the names of variables we will be exporting
-				write("time,collisions"); 
+				write("time,positions"); 
+			}
+			@Override
+			public void during() {	
+				Bpos = bacterium.getPosition();			
 			}
 			
-			@Override
-			public void during() {
-				
-			}
-		};
-		sim.addExporter(logger);
-
-		/*
-		 * Add your own exporters by extending BSimExporter like
-		 * 
-		 * BSimExporter e = new BSimExporter(){}; 
-		 *
-		 */		
+			sim.addExporter(new BSimGutLogger(sim, resultsDir + "bacteriaPositions.csv") {
+				@Override
+				public void during() {
+					set();
+					write(sim.getFormattedTime()+","Bpos);
+				}
+				super.during();
+				}
+			});
+			
+	}
 
 		/*********************************************************
 		 * Step 6: Call sim.preview() to preview the scene or sim.export() to set exporters working 
 		 */
 		sim.preview();
+		sim.export();
 
 	}
 }
