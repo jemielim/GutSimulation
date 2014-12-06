@@ -25,7 +25,7 @@ import bsim.BSimChemicalField;
  */
 public class BSimGut {
 
-	public static <BSimChemicalFieldGut>  void main(String[] args) {
+	public static  void main(String[] args) {
 
 		/*********************************************************
 		 * Step 1: Create a new simulation object and set environmental properties
@@ -60,7 +60,6 @@ public class BSimGut {
 		final double zr = 100;
 		sim.setBound(xr, yr, zr);		// Simulation boundaries [um]
 		sim.setSolid(true, true, true);
-		
 		
 		/*********************************************************
 		 * Set up the chemical field. The code will be set up to have 5 possible chemical fields (A, B, C, D) that respectively are food sources for
@@ -107,7 +106,16 @@ public class BSimGut {
 		/*********************************************************
 		 * Step 2: Extend BSimParticle as required and create vectors marked final
 		 * 
-		 */				
+		 */		
+	
+		class temp extends BSimChemicalField {
+			
+						// Constructor for the BSimTutorialBacterium
+						public temp(BSim sim, int[] boxes, double diffusivity, double decayRate)  { 
+							super(sim, boxes, diffusivity, decayRate);
+						}
+					
+		}
 		class BSimMultiSpecies extends BSimBacterium {
 			// local field for setting whether a collision is occurring
 			@SuppressWarnings("unused")
@@ -146,37 +154,17 @@ public class BSimGut {
 					//Produce chemoattractant for the specific species
 					if(species ==0){
 					fieldC.addQuantity(position, chemCProd);
-					fieldE.addQuantity(position, chemEProd);
-					
+					fieldE.addQuantity(position, chemEProd);					
 					}
 					else {
 					fieldD.addQuantity(position, chemDProd);
 					}
-
 					
 			}
 		
 		}
 
-		class BSimChemicalFieldGut extends BSimChemicalField{
 
-			
-			public BSimChemicalFieldGut(BSim sim, int[] boxes,
-					double diffusivity, double decayRate) {
-				super(sim, boxes, diffusivity, decayRate);
-				// TODO Auto-generated constructor stub
-			}
-
-			public void addFields(BSimChemicalField chemA, BSimChemicalField chemB)
-			{
-				//Combine together the fields from two different chemical fields. 
-				//Most naive way to combine together chemoattractants and chemorepellents
-				//this.setConc(x, y, z, chemEProd);
-				
-			
-			}
-			
-		}
 	
 		// Set up a list of bacteria that will be present in the simulation
 		
@@ -195,16 +183,7 @@ public class BSimGut {
 			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
 					new Vector3d(Math.random()*sim.getBound().x, 
 							 Math.random()*sim.getBound().y, 
-								 Math.random()*sim.getBound().z),0);
-			
-
-			//mlj: temporary
-//			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
-//					new Vector3d(0.25*sim.getBound().x, 
-//							 0.25*sim.getBound().y, 
-//								0.25* sim.getBound().z), 0);
-//			
-			
+								 Math.random()*sim.getBound().z),0);			
 
 			// If the bacterium doesn't intersect any others then add it to the overall list
 			if(!b.intersection(bacOne)) bacOne.add(b);	
@@ -212,7 +191,7 @@ public class BSimGut {
 			b.setSurfaceAreaGrowthRate(growthRateOne);
 			
 			b.setChildList(childOne);
-			b.setGoal(field);
+			b.setGoal(fieldA);
 			bacOne.add(b);
 		}
 		
@@ -224,19 +203,13 @@ public class BSimGut {
 								Math.random()*sim.getBound().y/2, 
 								Math.random()*sim.getBound().z/2),1);
 			
-			//mlj: temporary
-//			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
-//					new Vector3d(0.75*sim.getBound().x, 
-//							 0.75*sim.getBound().y, 
-//								0.75* sim.getBound().z),1);
-//			
 			// If the bacterium doesn't intersect any others then add it to the overall list
 			if(!b.intersection(bacOne)) bacTwo.add(b);	
 			b.setRadius();
 			b.setSurfaceAreaGrowthRate(growthRateTwo);
 			
 			b.setChildList(childTwo);
-			b.setGoal(fieldA);
+			b.setGoal(fieldB);
 
 			bacTwo.add(b);
 		}
@@ -287,6 +260,8 @@ public class BSimGut {
 		
 		}
 		
+		
+
 
 		/*********************************************************
 		 * Step 3: Implement tick() on a BSimTicker and add the ticker to the simulation	  
@@ -311,16 +286,25 @@ public class BSimGut {
 				bacTwo.addAll(childTwo);
 				childTwo.clear();
 			
-				//field.addQuantity(new Vector3d(10,10,10),1e6);
-//				for( int i=1;i<10;i++){
-//					for (int j=1;j<10;j++){
-//						fieldA.addQuantity(0,i,j,1e11);
-//					}
-//				}
+				//The code below updates the fields A and B, which are the fields that the bacteria 
+				//respectively respond to. This is a stupid way to do it, but for some reason I was having a problem extending
+				//the class BSimChemicalField.
+				
+
+				 for(int i=0; i<10; i++){
+					 for(int j=0; j<10; j++){
+						 for(int k=0; k<10; k++){
+							 fieldA.setConc(i,j,k, fieldC.getConc(i,j,k));
+							 fieldB.setConc(i,j,k, (fieldD.getConc(i,j,k)-fieldE.getConc(i,j,k)));
+							 							 
+						 }
+					 }
+				}
 				
 				field.update();
-				fieldA.update();
-				fieldB.update();
+				
+				//mlj: Note we are *not* updating fieldA and fieldB as part up the update. These values are just set to the sum from the 
+				//above code. Otherwise things wouldn't diffuse properly.				
 				fieldC.update();
 				fieldD.update();
 				fieldE.update();
@@ -351,8 +335,8 @@ public class BSimGut {
 				
 				
 				//mlj: To test that the fields are being produced properly show these fields.
-				draw(fieldE, Color.GREEN, (float)(255/c));						
-				draw(fieldD, Color.RED, (float)(255/c));						
+				draw(fieldA, Color.GREEN, (float)(4.00*255/c));						
+				draw(fieldB, Color.RED, (float)(4*255/c));						
 			
 				
 			}
