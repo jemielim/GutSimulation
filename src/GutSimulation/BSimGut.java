@@ -52,7 +52,7 @@ public class BSimGut {
 		 * Set up the environment for the simulation
 		 */
 		BSim sim = new BSim();			// New simulation object
-		sim.setDt(1);				// Global dt (time step)
+		sim.setDt(0.01);				// Global dt (time step)
 		sim.setSimulationTime(1000);		// Total simulation time [sec]
 		sim.setTimeFormat("0.00");		// Time format (for display etc.)
 		double xr = 400;
@@ -64,20 +64,11 @@ public class BSimGut {
 		
 
 		
-		/*********************************************************
-		 * Set up the chemical field. The code will be set up to have 5 possible chemical fields (A, B, C, D) that respectively are food sources for
-		 * species one and two (A and B), chemoattractants for species one and two to itself (C and D) and a chemorepellent that species one produces
-		 *  to act on species two. Kind of a lot, but we can narrow things down latter as necessary.
-		 * We'll assume all cytokines and nutrients have the same diffusivity and decay rate.
-		 */
-		
-		
-		
-		final double c = 0; // molecules
-		final double decayRate = 10e2;
+		final double decayRate = 1;
 		final double diffusivity = 10e2; // (microns)^2/sec
 		final BSimChemicalField field = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 			
+		field.setConc( 0);
 		final BSimChemicalField fieldA = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 		final BSimChemicalField fieldB = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
 		final BSimChemicalField fieldC = new BSimChemicalField(sim, new int[]{10,10,10}, diffusivity, decayRate);
@@ -140,14 +131,14 @@ public class BSimGut {
 				super.action();
 				//if (Math.random() < sim.getDt())
 					
-					//Produce chemoattractants for the specific species
+					//Produce chemo-attractants for the specific species
 					if(species ==0){
 					fieldC.addQuantity(position, chemCProd);
 					fieldE.addQuantity(position, chemEProd);
 					
 					}
 					else {
-					fieldD.addQuantity(position, chemDProd);
+					field.addQuantity(position, chemDProd);
 					}
 				field.addQuantity(position, chemDProd);
 			}
@@ -211,9 +202,9 @@ public class BSimGut {
 			// Creates a new bacterium with random position within the boundaries
 			
 			BSimMultiSpecies b = new BSimMultiSpecies(sim, 
-					new Vector3d(Math.random()*sim.getBound().x, 
-								Math.random()*sim.getBound().y, 
-								Math.random()*sim.getBound().z));
+					new Vector3d(Math.random()*sim.getBound().x/2, 
+								Math.random()*sim.getBound().y/2, 
+								Math.random()*sim.getBound().z/2));
 			// If the bacterium doesn't intersect any others then add it to the overall list
 			if(!b.intersection(bacOne)) bacTwo.add(b);	
 			b.setRadius();
@@ -280,7 +271,7 @@ public class BSimGut {
 			public void tick() {
 				for(BSimMultiSpecies b : bacOne) {
 					b.action();		
-					//b.updatePosition();					
+					b.updatePosition();					
 				}
 				
 				bacOne.addAll(childOne);
@@ -288,7 +279,7 @@ public class BSimGut {
 				
 				for(BSimMultiSpecies b : bacTwo){
 					b.action();		
-				//	b.updatePosition();					
+					b.updatePosition();					
 				}
 				bacTwo.addAll(childTwo);
 				childTwo.clear();
@@ -319,7 +310,7 @@ public class BSimGut {
 					draw(b, Color.BLUE);
 					//draw(b, (b.getSpecies() == 0) ? Color.RED: Color.BLUE);
 				}
-				draw(field, Color.BLUE, (float)(255/c));						
+				//draw(field, Color.BLUE, (float)(255/c));						
 			
 				
 			}
